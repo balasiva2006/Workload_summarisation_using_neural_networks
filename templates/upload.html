@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload & Cluster — Workload summarization</title>
+    <meta name="description" content="Upload SQL query files and perform K-Means clustering analysis">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>
+            </div>
+            <span class="brand-text">Workload summarization</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-dashboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </a>
+            <a href="/upload" class="nav-link active" id="nav-upload">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload & Cluster
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="upload-page">
+            <section class="hero-section">
+                <h1 class="page-title">Upload & Cluster New Queries</h1>
+                <p class="page-subtitle">Upload a SQL query file and specify the number of clusters to perform K-Means analysis</p>
+            </section>
+
+            <!-- Upload Form -->
+            <section class="upload-section">
+                <div class="upload-card">
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <!-- Dropzone -->
+                        <div class="dropzone" id="dropzone">
+                            <div class="dropzone-content">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="dropzone-icon">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <p class="dropzone-text">Drag & drop your query file here</p>
+                                <p class="dropzone-hint">or click to browse — supports .txt, .sql files</p>
+                                <p class="dropzone-hint" style="margin-top:4px;font-size:0.75rem;">Queries should be separated by <code>#$@</code></p>
+                            </div>
+                            <input type="file" id="file-input" name="file" accept=".txt,.sql" hidden>
+                        </div>
+
+                        <!-- File info -->
+                        <div class="file-info" id="file-info" style="display: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span id="file-name"></span>
+                            <button type="button" class="file-remove" id="file-remove">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- K Value Input -->
+                        <div class="form-group">
+                            <label for="k-value" class="form-label">Number of Clusters (K)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="k-value" name="k" min="2" max="100" value="5" class="form-input" required>
+                                <span class="input-hint">Choose between 2 and 100</span>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit" class="btn btn--primary btn--large btn--full" id="btn-submit" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            Run Clustering Analysis
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Processing Indicator -->
+            <div class="processing" id="processing" style="display: none;">
+                <div class="loader-ring"><div></div><div></div><div></div><div></div></div>
+                <p class="processing-text">Processing queries... This may take a moment.</p>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+
+            <!-- Results Section (hidden until results come back) -->
+            <section class="results-section" id="results-section" style="display: none;">
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Clustering Results
+                </h2>
+
+                <!-- Stats -->
+                <div class="stats-grid stats-grid--small">
+                    <div class="stat-card stat-card--primary">
+                        <div class="stat-value" id="res-total-queries">—</div>
+                        <div class="stat-label">Total Queries</div>
+                    </div>
+                    <div class="stat-card stat-card--accent">
+                        <div class="stat-value" id="res-k">—</div>
+                        <div class="stat-label">K Value</div>
+                    </div>
+                    <div class="stat-card stat-card--success">
+                        <div class="stat-value" id="res-compression">—</div>
+                        <div class="stat-label">Compression</div>
+                    </div>
+                    <div class="stat-card stat-card--info">
+                        <div class="stat-value" id="res-avg-cluster">—</div>
+                        <div class="stat-label">Avg Cluster Size</div>
+                    </div>
+                </div>
+
+                <!-- Cluster list -->
+                <div class="cluster-list" id="upload-cluster-list">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal for viewing cluster queries -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="query-modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Cluster Queries</h3>
+                <button class="modal-close" id="modal-close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/upload.js"></script>
+</body>
+</html>
